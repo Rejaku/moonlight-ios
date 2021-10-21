@@ -11,9 +11,10 @@
 
 @interface SettingsViewController : UIViewController
 @property (strong, nonatomic) IBOutlet UILabel *bitrateLabel;
+@property (strong, nonatomic) IBOutlet UILabel *resolutionLabel;
 @property (strong, nonatomic) IBOutlet UISlider *bitrateSlider;
+@property (strong, nonatomic) IBOutlet UISlider *resolutionSlider;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *framerateSelector;
-@property (strong, nonatomic) IBOutlet UISegmentedControl *resolutionSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *touchModeSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *onscreenControlSelector;
 @property (strong, nonatomic) IBOutlet UISegmentedControl *optimizeSettingsSelector;

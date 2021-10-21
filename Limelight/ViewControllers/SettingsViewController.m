@@ -14,9 +14,41 @@
 
 @implementation SettingsViewController {
     NSInteger _bitrate;
+    NSInteger _width;
+    NSInteger _height;
 }
 
 @dynamic overrideUserInterfaceStyle;
+
+static NSString* resolutionFormat = @"Resolution: %dx%d (%d:%d)";
+static const int widthTable[] = {
+    640,
+    800,
+    1024,
+    1152,
+    1280,
+    1280,
+    1600,
+    1600,
+    1920,
+    1920,
+    2048,
+    2560
+};
+static const int heightTable[] = {
+    480,
+    600,
+    768,
+    864,
+    720,
+    960,
+    900,
+    1200,
+    1080,
+    1440,
+    1536,
+    1440
+};
 
 static NSString* bitrateFormat = @"Bitrate: %.1f Mbps";
 static const int bitrateTable[] = {
@@ -121,6 +153,11 @@ static const int bitrateTable[] = {
     
     // Ensure we pick a bitrate that falls exactly onto a slider notch
     _bitrate = bitrateTable[[self getSliderValueForBitrate:[currentSettings.bitrate intValue]]];
+
+    NSInteger resolution = (int)self.resolutionSlider.value + 1;
+    if (currentSettings.resolution) {
+        resolution = [currentSettings.resolution integerValue];
+    }
     
     NSInteger framerate;
     switch ([currentSettings.framerate integerValue]) {
@@ -135,22 +172,6 @@ static const int bitrateTable[] = {
             framerate = 2;
             break;
     }
-    NSInteger resolution;
-    switch ([currentSettings.height integerValue]) {
-        case 360:
-            resolution = 0;
-            break;
-        default:
-        case 720:
-            resolution = 1;
-            break;
-        case 1080:
-            resolution = 2;
-            break;
-        case 2160:
-            resolution = 3;
-            break;
-    }
     
     // Only show the 120 FPS option if we have a > 60-ish Hz display
     bool enable120Fps = false;
@@ -163,15 +184,14 @@ static const int bitrateTable[] = {
         [self.framerateSelector removeSegmentAtIndex:2 animated:NO];
     }
     
-    // Only show the 4K option for "recent" devices. We'll judge that by whether
+    // Only show the 1536p option for "recent" devices. We'll judge that by whether
     // they support HEVC decoding (A9 or later).
     if (@available(iOS 11.0, tvOS 11.0, *)) {
         if (!VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) {
-            [self.resolutionSelector removeSegmentAtIndex:3 animated:NO];
+            self.resolutionSlider.maximumValue = 12;
         }
-    }
-    else {
-        [self.resolutionSelector removeSegmentAtIndex:3 animated:NO];
+    } else {
+        self.resolutionSlider.maximumValue = 12;
     }
     
     // Disable the HEVC and HDR selector if HEVC is not supported by the hardware
@@ -207,16 +227,19 @@ static const int bitrateTable[] = {
     [self.multiControllerSelector setSelectedSegmentIndex:currentSettings.multiController ? 1 : 0];
     [self.audioOnPCSelector setSelectedSegmentIndex:currentSettings.playAudioOnPC ? 1 : 0];
     NSInteger onscreenControls = [currentSettings.onscreenControls integerValue];
-    [self.resolutionSelector setSelectedSegmentIndex:resolution];
-    [self.resolutionSelector addTarget:self action:@selector(newResolutionFpsChosen) forControlEvents:UIControlEventValueChanged];
     [self.framerateSelector setSelectedSegmentIndex:framerate];
     [self.framerateSelector addTarget:self action:@selector(newResolutionFpsChosen) forControlEvents:UIControlEventValueChanged];
     [self.onscreenControlSelector setSelectedSegmentIndex:onscreenControls];
     [self.onscreenControlSelector setEnabled:!currentSettings.absoluteTouchMode];
+    [self.resolutionSlider setMinimumValue:0];
+    [self.resolutionSlider setMaximumValue:(sizeof(widthTable) / sizeof(*widthTable)) - 1];
+    [self.resolutionSlider setValue:resolution];
+    [self.resolutionSlider addTarget:self action:@selector(resolutionSliderMoved) forControlEvents:UIControlEventValueChanged];
     [self.bitrateSlider setMinimumValue:0];
     [self.bitrateSlider setMaximumValue:(sizeof(bitrateTable) / sizeof(*bitrateTable)) - 1];
     [self.bitrateSlider setValue:[self getSliderValueForBitrate:_bitrate] animated:YES];
     [self.bitrateSlider addTarget:self action:@selector(bitrateSliderMoved) forControlEvents:UIControlEventValueChanged];
+    [self resolutionSliderMoved];
     [self updateBitrateText];
 }
 
@@ -264,6 +287,18 @@ static const int bitrateTable[] = {
     [self updateBitrateText];
 }
 
+- (void) resolutionSliderMoved {
+    assert(self.resolutionSlider.value < (sizeof(widthTable) / sizeof(*widthTable)));
+    _width = widthTable[(int)self.resolutionSlider.value];
+    _height = heightTable[(int)self.resolutionSlider.value];
+    [self updateResolutionText];
+}
+
+- (void) updateResolutionText {
+    NSInteger gcd = [self greatestCommonDivisorM:_width N:_height];
+    [self.resolutionLabel setText:[NSString stringWithFormat:resolutionFormat, _width, _height, _width / gcd, _height / gcd]];
+}
+
 - (void) bitrateSliderMoved {
     assert(self.bitrateSlider.value < (sizeof(bitrateTable) / sizeof(*bitrateTable)));
     _bitrate = bitrateTable[(int)self.bitrateSlider.value];
@@ -289,17 +324,16 @@ static const int bitrateTable[] = {
 }
 
 - (NSInteger) getChosenStreamHeight {
-    const int resolutionTable[] = { 360, 720, 1080, 2160 };
-    return resolutionTable[[self.resolutionSelector selectedSegmentIndex]];
+    return heightTable[(int)self.resolutionSlider.value];
 }
 
 - (NSInteger) getChosenStreamWidth {
-    // Assumes fixed 16:9 aspect ratio
-    return ([self getChosenStreamHeight] * 16) / 9;
+    return widthTable[(int)self.resolutionSlider.value];
 }
 
 - (void) saveSettings {
     DataManager* dataMan = [[DataManager alloc] init];
+    NSInteger resolution = (int)self.resolutionSlider.value;
     NSInteger framerate = [self getChosenFrameRate];
     NSInteger height = [self getChosenStreamHeight];
     NSInteger width = [self getChosenStreamWidth];
@@ -313,6 +347,7 @@ static const int bitrateTable[] = {
     BOOL absoluteTouchMode = [self.touchModeSelector selectedSegmentIndex] == 1;
     BOOL statsOverlay = [self.statsOverlaySelector selectedSegmentIndex] == 1;
     [dataMan saveSettingsWithBitrate:_bitrate
+                          resolution:resolution
                            framerate:framerate
                               height:height
                                width:width
@@ -330,6 +365,24 @@ static const int bitrateTable[] = {
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
+}
+
+- (NSInteger) greatestCommonDivisorM:(NSInteger)m N:(NSInteger)n {
+    NSInteger t, r;
+
+    if (m < n) {
+        t = m;
+        m = n;
+        n = t;
+    }
+    r = m % n;
+
+    if (r == 0) {
+        return n;
+    } else {
+        return [self greatestCommonDivisorM:n N:r];
+
+    }
 }
 
 

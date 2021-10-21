@@ -12,6 +12,7 @@
 
 @property (nonatomic, retain) Settings * parent;
 
+@property (nonatomic, retain) NSNumber * resolution;
 @property (nonatomic, retain) NSNumber * bitrate;
 @property (nonatomic, retain) NSNumber * framerate;
 @property (nonatomic, retain) NSNumber * height;

@@ -14,6 +14,7 @@
 @property NSString* appID;
 @property NSString* appName;
 @property NSString* rtspSessionUrl;
+@property int resolution;
 @property int width;
 @property int height;
 @property int frameRate;

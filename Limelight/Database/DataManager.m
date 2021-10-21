@@ -53,6 +53,7 @@
 }
 
 - (void) saveSettingsWithBitrate:(NSInteger)bitrate
+                      resolution:(NSInteger)resolution
                        framerate:(NSInteger)framerate
                           height:(NSInteger)height
                            width:(NSInteger)width
@@ -68,6 +69,7 @@
     
     [_managedObjectContext performBlockAndWait:^{
         Settings* settingsToSave = [self retrieveSettings];
+        settingsToSave.resolution = [NSNumber numberWithInteger:resolution];
         settingsToSave.framerate = [NSNumber numberWithInteger:framerate];
         settingsToSave.bitrate = [NSNumber numberWithInteger:bitrate];
         settingsToSave.height = [NSNumber numberWithInteger:height];
