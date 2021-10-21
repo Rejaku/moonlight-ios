@@ -174,25 +174,31 @@ static const int bitrateTable[] = {
         [self.resolutionSelector removeSegmentAtIndex:3 animated:NO];
     }
     
-    // Disable the HEVC selector if HEVC is not supported by the hardware
+    // Disable the HEVC and HDR selector if HEVC is not supported by the hardware
     // or the version of iOS. See comment in Connection.m for reasoning behind
     // the iOS 11.3 check.
     if (@available(iOS 11.3, tvOS 11.3, *)) {
         if (VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)) {
             [self.hevcSelector setSelectedSegmentIndex:currentSettings.useHevc ? 1 : 0];
+            [self.hdrSelector setSelectedSegmentIndex:currentSettings.enableHdr ? 1 : 0];
         }
         else {
             [self.hevcSelector removeAllSegments];
             [self.hevcSelector insertSegmentWithTitle:@"Unsupported on this device" atIndex:0 animated:NO];
             [self.hevcSelector setEnabled:NO];
+            [self.hdrSelector removeAllSegments];
+            [self.hdrSelector insertSegmentWithTitle:@"Unsupported on this device" atIndex:0 animated:NO];
+            [self.hdrSelector setEnabled:NO];
         }
     }
     else {
         [self.hevcSelector removeAllSegments];
         [self.hevcSelector insertSegmentWithTitle:@"Requires iOS 11.3 or later" atIndex:0 animated:NO];
         [self.hevcSelector setEnabled:NO];
+        [self.hdrSelector removeAllSegments];
+        [self.hdrSelector insertSegmentWithTitle:@"Requires iOS 11.3 or later" atIndex:0 animated:NO];
+        [self.hdrSelector setEnabled:NO];
     }
-    
     [self.touchModeSelector setSelectedSegmentIndex:currentSettings.absoluteTouchMode ? 1 : 0];
     [self.touchModeSelector addTarget:self action:@selector(touchModeChanged) forControlEvents:UIControlEventValueChanged];
     [self.statsOverlaySelector setSelectedSegmentIndex:currentSettings.statsOverlay ? 1 : 0];
@@ -302,6 +308,7 @@ static const int bitrateTable[] = {
     BOOL multiController = [self.multiControllerSelector selectedSegmentIndex] == 1;
     BOOL audioOnPC = [self.audioOnPCSelector selectedSegmentIndex] == 1;
     BOOL useHevc = [self.hevcSelector selectedSegmentIndex] == 1;
+    BOOL enableHdr = [self.hdrSelector selectedSegmentIndex] == 1;
     BOOL btMouseSupport = [self.btMouseSelector selectedSegmentIndex] == 1;
     BOOL absoluteTouchMode = [self.touchModeSelector selectedSegmentIndex] == 1;
     BOOL statsOverlay = [self.statsOverlaySelector selectedSegmentIndex] == 1;
@@ -314,7 +321,7 @@ static const int bitrateTable[] = {
                      multiController:multiController
                            audioOnPC:audioOnPC
                              useHevc:useHevc
-                           enableHdr:NO
+                           enableHdr:enableHdr
                       btMouseSupport:btMouseSupport
                    absoluteTouchMode:absoluteTouchMode
                         statsOverlay:statsOverlay];
